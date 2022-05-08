@@ -1,5 +1,7 @@
 # CIS 561 Advanced Rendering Study Guide 
 
+For best viewing, clone repo > open vs code > install extension  *Markdown All In One* by Yu Zhang > `cmd + shift + v` to see md formatted. 
+
 ## Ray Tracing 
 - Raycasting 
   - Cast a ray (line) from the camera eye to a screen pixel 
