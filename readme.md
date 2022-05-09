@@ -462,9 +462,26 @@ Solution: test groups of elements
 - https://docs.google.com/presentation/d/1gNIdPKJ9Wo0CsWfxIs0guVo69kKWsg9SQZiW7mWjlc4/edit#slide=id.g699423a70_1452
 
 # Thin Lens
-
-# Point Lights 
-
+- In real life cameras have apertures and are not just a single hole (pinhole) in space
+1. Give camera a non-zero `lens radius`
+2. Get a perturbed ray by sample a point on the camera lens
+3. Compute point on plane of focus
+    - finding the appropriate point of convergence is a matter of intersecting the unperturbed ray from the pinhole model with the plane of focus and then setting the new ray’s direction to be the vector from the point on the lens to the intersection point.
+- Effect: **depth of field**
+  - Objects at focal plane = super clear 
+  - Objects far from focal plane = blurry since all the information must converge to some point on the plane
+  - ![](img/dof.png)
+- ![](img/thinlens.png)
+  
+# Point & Spot Lights
+- Point light = Light is a point 
+- Spot light =  a type of point light where the light is a cone of directions
+  - Contains a total width 
+  - A fall off start, can tune fall off (sharp for soft)
+- Color returned is `(lightIntensity / r^2)` where r = distance from p to point light 
+- PDF for these always 0 cause there's no "area"
+- https://github.com/CIS-461-2022/homework-06-k-d-tree-and-path-tracer-additions-48kaiying/blob/4de175d644a56b4ac5576cf126471648c6eebb6e/path_tracer/src/scene/lights/pointlight.cpp
+- ![](img/ptspotlight.png)
 
 
 # Volumemetric 
@@ -484,9 +501,6 @@ Solution: test groups of elements
   - Treat a diffuse area light as a collection of point lights
   - Basically, for a pixel we sample the hemisphere of view directions, some directions will be blocked and some will not be blocked, thus the average of all those directions will give us varying darkness. 
 
-# Depth of Field 
-- Only happens with a thin lens camera - aperture is no longer a single point in space 
-- #finish me ![](img/dof.png)
 
 # Quiz Review 
 # Naive Integrator 
