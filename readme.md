@@ -13,10 +13,10 @@ For best viewing
 - Shadows 
   - To compute shadows, cast a ray from the intersection to the light source. If the ray hits something to the light then, `color = black` otherwise `color = material_at_intersection`. 
 - Everything is computed in `world space`
-![](camera_transforms.png)
-![](ndc.png)
-![](screen_to_world.png)
-![](ray2world.png)
+![](img/camera_transforms.png)
+![](img/ndc.png)
+![](img/screen_to_world.png)
+![](img/ray2world.png)
 
 # Ray-Poly Intersection
 - We test a ray against **untransformed** geometry.
@@ -29,14 +29,14 @@ For best viewing
       - `t > 0` : valid t, ray intersects polygon in front of ray origin 
       - `t < 0` : ray intersects polygon behind the ray origin
       - `t = 0` : ray intersects polygon exactly at ray origin 
-    - ![](isect_test.png)
+    - ![](img/isect_test.png)
 3. Transform intersection point `p` to world. `p_world = local2world * vec4(p,0)`. We also transform local surface normal. The `t` remains the same, explained below.
 
 # Frames of Reference + Surface Normals
 - After finding intersection, the `t_local` is the same as the `t_world` since the distance from the local ray to the sphere is the same as the skewed world ray to the world sphere 
 - We also need the surface normal at the point of intersection, thus, we need to:
   - Get the surface `normal_local` from the intersection (e.g. unit sphere)
-  - Problem: bringing normal to world, we can not simply do `local2world * local_normal` since that skews the normal to be not perpendicular because the scale of the `local2world` is applied to the normal vector ![](fucked_surface_norms.png)
+  - Problem: bringing normal to world, we can not simply do `local2world * local_normal` since that skews the normal to be not perpendicular because the scale of the `local2world` is applied to the normal vector ![](img/fucked_surface_norms.png)
   - Solution: 
     - Invert the scale that is applied while keeping the rotation. Ignore translation because a normal has no position. 
     - `norm_world = inverse_transpose_local2world * norm_local`
@@ -55,18 +55,18 @@ For best viewing
      - pro: Mathematically correct
      - con: Poor convergence rate 
      - con: Grainy ass shadows 
-     - con: Samples may cluster by chance ![](pure_random.png)
+     - con: Samples may cluster by chance ![](img/pure_random.png)
    - Grid 
      - divide square into grid cells, sample at grid middle
      - pro: uniform distribution 
-     - con: looks too uniform to be natural, also line artifacts ![](unif_sample.png)
+     - con: looks too uniform to be natural, also line artifacts ![](img/unif_sample.png)
    - Stratified
      - combine grid and random approach by dividing square into grid cells and randomly sampling within the cell
-     - shadow is uniform and no obvious artifacts ![](strat_sample.png)
+     - shadow is uniform and no obvious artifacts ![](img/strat_sample.png)
   
 # Sample Warping 
 Goal: want to map 2D points to 3D surfaces while maintaining relative spacing
-![](wrap.png)
+![](img/wrap.png)
 
 Types of Wrapping:
 - Square to hemisphere uniform 
@@ -81,13 +81,13 @@ Cos-weighted Sampling
 - **Malley's Method**
   - A way to achieve cos weighted effect via 
   - Two equal sized areas on a disk when projected to hemisphere are not equal. The one closer to the hemisphere edge is projected as much larger. 
-  - Points closer to the edge are more spread out, points closer to the center of the disk are clustered ![](malley.png)
+  - Points closer to the edge are more spread out, points closer to the center of the disk are clustered ![](img/malley.png)
   - Can only do this by sampling a disk
 - Square to Disk sampling 
   - Problem: 
     - we can not just do $\theta = \xi_1, r = 2\pi\xi_2$ because this ends up clustering samples near the center of the disc.
-    - Arc lengths are smaller between angles at smaller r than at larger r. ![](Arc-Length-Formula.png)
-  - Solution: ![](sq2disk_sample.png)
+    - Arc lengths are smaller between angles at smaller r than at larger r. ![](img/Arc-Length-Formula.png)
+  - Solution: ![](img/sq2disk_sample.png)
 
 # Probability Distribution Functions (PDFs)
 - Used to describe continuous probability -- infinite trials, infinite rolls 
@@ -129,7 +129,7 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
 
 ### Integration version
 This is what we would like to do, in theory, but very hard to integrate things so we do a summation to estimate. 
-![](LET_inte.png)
+![](img/LET_inte.png)
 
 # BRDFs
 - A function 
@@ -141,9 +141,9 @@ This is what we would like to do, in theory, but very hard to integrate things s
     - Illumination over the hemisphere is uniform 
     - All directions within the hemisphere emit the same energy 
     - So function is a constant, `mat_color / pi`
-    - Why div pi? Cause we need to integrate over the hemisphere surface area. ![](lambert_brdf.png)
+    - Why div pi? Cause we need to integrate over the hemisphere surface area. ![](img/lambert_brdf.png)
   - Specular/Mirror: a function that is 0/black for all `wi` and `wo` that are not perfect reflections of one another at `p`, and 1 when `wi = reflect(wo)`
-![](whats_brdf.png)
+![](img/whats_brdf.png)
 
 # Specular & Transmissive Materials 
 - Fresnel 
@@ -154,13 +154,13 @@ This is what we would like to do, in theory, but very hard to integrate things s
 - Monte Carlo estimation computes the expected value of the LTE 
   - takes random samples of a function and averages out the results together
   - the more samples = the more correct the average result of the correct integral value 
-![](mcpt_vs_rt.png)
+![](img/mcpt_vs_rt.png)
 
 # (MCPT) Naive Path Tracer 
 - Cast rays and sample from the intersection BRDF. 
 - Ray terminates at recursion depth. 
 - Ray only returns non-black if it hits the light at some point in the path. 
-- Image converges very slowly. ![](naive_pt.png)
+- Image converges very slowly. ![](img/naive_pt.png)
 
 # (MCPT) Direct Lighting 
 - https://github.com/CIS-461-2022/homework-03-direct-lighting-and-specular-materials-48kaiying/blob/d116ce372992630efa6d25b02091cc08b0c6c8ca/path_tracer/src/integrators/directlightingintegrator.cpp
@@ -181,14 +181,14 @@ This is what we would like to do, in theory, but very hard to integrate things s
 ### Solid Angle Conversion 
 **$PDF{dw} = PDF_{dA} * (r^2/cos(\theta)) = r^2 / (cos(\theta) * area)$**
   - **All pdfs** in the path tracer are **with respect to the domain of the hemisphere**, thus we need to convert the PDF wrt light surface area to pdf wrt hemisphere solid angle 
-  - ![](soildangle.png)
-  - ![](soildangle1.png)
-  - ![](soildangle2.png)
+  - ![](img/soildangle.png)
+  - ![](img/soildangle1.png)
+  - ![](img/soildangle2.png)
   - Solid angle's $dw$ intuition:
     - $1 / r^2$ : the farther you (intersection point p) is from the light, the smaller the light path looks
     - $cos(\theta)$ : theta is the angle between the `light normal` and the `norm(p - light)`
-      - Smaller theta, larger cos(theta) = the more directly the light shines on p ![](sa_r2.png)
-      - Larger theta, smaller cos(theta) = the more the light faces away from p ![](sa_costheta.png)
+      - Smaller theta, larger cos(theta) = the more directly the light shines on p ![](img/sa_r2.png)
+      - Larger theta, smaller cos(theta) = the more the light faces away from p ![](img/sa_costheta.png)
   - Conversion: 
     - $dw/dA = cos(\theta) / r^2$
     - $PDF_{dw} = PDF_{dA} / (dw/dA)$
@@ -198,9 +198,9 @@ This is what we would like to do, in theory, but very hard to integrate things s
   - Must divide pdf by the number of light sources, since we use one light source to count as all the light source contribution for the sample
 - Cons
   - Since there is no ray bounce, you can not see transmissive or specular things 
-![](cornell_dl.png) ![](dl_ex1.png) ![](glassball_dl.png)
+![](img/cornell_dl.png) ![](img/dl_ex1.png) ![](img/glassball_dl.png)
 - Misc 
-![](estimating_dl.png)
+![](img/estimating_dl.png)
 
 # (MCPT) Multiple Importance Sampling 
 - https://github.com/CIS-461-2022/homework-04-multiple-importance-sampling-48kaiying/blob/master/path_tracer/src/integrators/directlightingintegrator.cpp
@@ -216,10 +216,10 @@ This is what we would like to do, in theory, but very hard to integrate things s
 - When material BRDF is **more diffuse** 
   - **Bad to sample just BRDF for small lights.** This is bad because the diffuse BRDF has a big lobe (many `wi` directions that can contribute non-zero energy). Recall, we only get energy if the `bsdf_wi` eventually hights light. But the light is small, so many of the `wi`s will not reach the light and result in zero contribution. 
   - Particularly shitty for point lights 
-- **`Left` = BSDF sampling ONLY. `Right` = light sampling ONLY** ![](mis_01.png)
+- **`Left` = BSDF sampling ONLY. `Right` = light sampling ONLY** ![](img/mis_01.png)
 - Orange lobe = bsdf, the more scattered (less specular, less mirror-like)
 - Yellow cone = light distribution. Big or small depending on light size
-- Variance ![](mis_variance.png)
+- Variance ![](img/mis_variance.png)
 ### The Balance Heuristic 
 Motivation: 
 - Clearly each method is good when the other is bad.
@@ -230,8 +230,8 @@ Solution:
 - We must weight our samples so they don't contribute too much to our result using 
   - `light_pdf(wi_light)`, `brdf_pdf(wi_light)`
   - `light_bdf(wi_brdf)`, `brdf_pdf(wi_brdf)`
-- Compute the weights ![](balance_heur.png)
-- Why it works ![](balance_heur_1.png)
+- Compute the weights ![](img/balance_heur.png)
+- Why it works ![](img/balance_heur_1.png)
 - Power heuristic further reduces variance.
   
 
@@ -245,7 +245,7 @@ Solution:
   - $\gamma = 1$ = original image
   - $\gamma > 1$ = darker shadows 
   - $\gamma < 1$ = lighter shadows 
-![](gammacorrect.png) 
+![](img/gammacorrect.png) 
 
 # Implicit vs Explicit Surfaces 
 - Explicit surfaces = defined by *parameterization* functions, e.g. meshes or specific shapes. 
@@ -292,7 +292,7 @@ Solution:
        - con: we don't see a surface that is just beyond the max 
   3. We've iterated some max number of iters along our ray 
        - con: our ray can travel very near the surface for a long time, waisting steps 
-- ![](./sphere%20marching.png)
+- ![](img//sphere%20marching.png)
 - Warping shapes via SDFs 
   - Add an offset to the SDFs 
 - Benefits of SDFs 
@@ -328,7 +328,7 @@ Solution:
 # Soft Shadows 
 - What prevents soft shadows? 
   - When lights only have one `w_i` no matter the `w_o` or position e.g. pont lights, directional lights
-  - ![](single_wi_light.png)
+  - ![](img/single_wi_light.png)
 - What makes soft shadows?
   - When the light source has surface area and is made partially available to a point
 - How to sample soft shadows?
@@ -337,7 +337,7 @@ Solution:
 
 # Depth of Field 
 - Only happens with a thin lens camera - aperture is no longer a single point in space 
-- #finish me ![](dof.png)
+- #finish me ![](img/dof.png)
 
 # Quiz Review 
 # Naive Integrator 
