@@ -390,8 +390,82 @@ Solution:
 - ![](img/oren_nay.png)
 - For isotropic material 
 
-### Anisotropic vs Isotropic 
+# Materials 
+### Anisotropic vs Isotropic
+- Anisotropic = brushed metal, light reflects in a shape, randomness based on orientation
+- Isotropic = light reflects equally in all directions
 ![](img/iso_aniso.png)
+
+
+# Accelerated Stuctures 
+Problem: intersection against a mesh with many triangles is horrible runtime
+
+Solution: test groups of elements 
+
+### Grid Acceleration 
+- Divide space into grids of cubes 
+- Each cube stores pointers to elements inside of it 
+  - Elements in overlapping cells are stored in both or cut 
+- Test cubes in front to back order 
+- Pros: 
+  - simple
+  - ez traversal
+- Cons:
+  - how to pick good grid cell size
+  - all elements end up in one cell 
+- ![](img/grid_accel.png)
+
+### Octree Acceleration 
+- 3d version of a quad tree (121 recall)
+- divide bounding box into 3 sub boxes
+- recursively divide if more than n elements in a cell and depth < d
+- requires stack traversal 
+  - leaf? check all elements for intersection 
+  - next node? walk up the tree to find siblings, then walk down the nest leaf
+- Pros:
+  - simple 
+  - adapts to gemotry 
+- Cons: 
+  - shitty for large objects 
+- ![](img/octree.png)
+
+### KD Tree Acceleration 
+- Split along one axis at a time 
+- Divide where you want (what we did in class: median in x, median in y, median in z)
+- Pros:
+  - more flexible than octree (can divide where ever instead of exactly in the middle)
+  - great for point sets 
+- Cons:
+  - complicated
+  - building tree = major overhead 
+- ![](img/kdtree.png)
+
+### Binary Space Partition Tree (BSP Tree) 
+- Split on **arbitrary** plane
+- Pros: 
+  - Tighter bounding volumes than kd tree
+  - ez traversal
+- Cons:
+  - Hard to construct 
+
+### Bounding Volumes (Top Down)
+- Start with bounding box of entire scene
+- Split so half of objects in each child
+- Split again on another axis 
+- Pros: 
+  - tighter bounding boxes than octrees and kd trees 
+  - easy to build
+  - each object only in 1 lead 
+- Cons:
+  - Nodes have overlapping bboxes, so harder to traverse 
+
+- https://docs.google.com/presentation/d/1gNIdPKJ9Wo0CsWfxIs0guVo69kKWsg9SQZiW7mWjlc4/edit#slide=id.g699423a70_1452
+
+# Thin Lens
+
+# Point Lights 
+
+
 
 # Volumemetric 
 
