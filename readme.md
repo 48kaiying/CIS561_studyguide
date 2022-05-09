@@ -127,10 +127,9 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
 - $pdf(w_i)$ = probability density function associated with the sampling function 
   - when we sample $w_i$, we
 
-# Monte Carlo Path Tracing  
-- Monte Carlo estimation computes the expected value of the LTE 
-  - takes random samples of a function and averages out the results together
-  - the more samples = the more correct the average result of the correct integral value 
+### Integration version
+This is what we would like to do, in theory, but very hard to integrate things so we do a summation to estimate. 
+![](LET_inte.png)
 
 # BRDFs
 - A function 
@@ -149,15 +148,22 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
 # Specular & Transmissive Materials 
 - Fresnel 
 - Transmission + Reflectance 
-- fuck 
+- #todo
 
-# Naive Path Tracer 
+# Monte Carlo Path Tracing (MCPT)
+- Monte Carlo estimation computes the expected value of the LTE 
+  - takes random samples of a function and averages out the results together
+  - the more samples = the more correct the average result of the correct integral value 
+![](mcpt_vs_rt.png)
+
+# (MCPT) Naive Path Tracer 
 - Cast rays and sample from the intersection BRDF. 
 - Ray terminates at recursion depth. 
 - Ray only returns non-black if it hits the light at some point in the path. 
 - Image converges very slowly. ![](naive_pt.png)
 
-# Direct Lighting 
+# (MCPT) Direct Lighting 
+- https://github.com/CIS-461-2022/homework-03-direct-lighting-and-specular-materials-48kaiying/blob/d116ce372992630efa6d25b02091cc08b0c6c8ca/path_tracer/src/integrators/directlightingintegrator.cpp
 - Light source sampling, every sample returns information
 - For each sample, cast $w_i$ directly at the light sources
 ### Sampling Light Sources 
@@ -186,25 +192,60 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
   - Conversion: 
     - $dw/dA = cos(\theta) / r^2$
     - $PDF_{dw} = PDF_{dA} / (dw/dA)$
+- Implementation details 
+  - There is no recursion! So very fast
+  - Randomly sample a light in the scene for $wi$
+  - Must divide pdf by the number of light sources, since we use one light source to count as all the light source contribution for the sample
+- Cons
+  - Since there is no ray bounce, you can not see transmissive or specular things 
+![](cornell_dl.png) ![](dl_ex1.png) ![](glassball_dl.png)
+- Misc 
+![](estimating_dl.png)
+
+# (MCPT) Multiple Importance Sampling 
+- https://github.com/CIS-461-2022/homework-04-multiple-importance-sampling-48kaiying/blob/master/path_tracer/src/integrators/directlightingintegrator.cpp
+- Combines BRDF sampling (used in naive) and Light sampling (used in direct lighting)
+- Problem: It is hard to find a function that marches the PDF of the light source and the PDF of the surface point
+- Solution: We will sample light and brdf and weight the results to get the best of both worlds 
+### MIS
+- TLDR, things are shitty when:
+  - Specular BRDF, big light and we only light sample 
+  - Diffuse BRDF, small light and we only BSDF sample
+- When material BRDF is **more specular**
+  - **Bad to sample just light for big lights.** This is bad because the specular BRDF has a "small lobe" i.e. there are not that many light vectors that contribute non-zero value for specular material. Thus, if you have a **big light source** with a **big light lobe**, then not many of the light samples give information since the `light_wi` will result in `pdf(wi) = 0 if light_wi != wo`.
+- When material BRDF is **more diffuse** 
+  - **Bad to sample just BRDF for small lights.** This is bad because the diffuse BRDF has a big lobe (many `wi` directions that can contribute non-zero energy). Recall, we only get energy if the `bsdf_wi` eventually hights light. But the light is small, so many of the `wi`s will not reach the light and result in zero contribution. 
+  - Particularly shitty for point lights 
+- **`Left` = BSDF sampling ONLY. `Right` = light sampling ONLY** ![](mis_01.png)
+- Orange lobe = bsdf, the more scattered (less specular, less mirror-like)
+- Yellow cone = light distribution. Big or small depending on light size
+- Variance ![](mis_variance.png)
+### The Balance Heuristic 
+Motivation: 
+- Clearly each method is good when the other is bad.
+- We can not simply add the `light_LTE` and the `BRDF_LTE` which are computed with the light and BRDF sampling respectively because: *Variance is additive*, and the image will look even more spotted. 
+- So we want to reduce variance.
+
+Solution: 
+- We must weight our samples so they don't contribute too much to our result using 
+  - `light_pdf(wi_light)`, `brdf_pdf(wi_light)`
+  - `light_bdf(wi_brdf)`, `brdf_pdf(wi_brdf)`
+- Compute the weights ![](balance_heur.png)
+- Why it works ![](balance_heur_1.png)
+- Power heuristic further reduces variance.
+  
 
 # Gamma Correction 
 - Problem: our eye balls do not perceive light the way cameras do. 
 - Digital cameras capture a `linear relationship` in luminance, but our eyes don't follow this. 
 - Our eyes are more sensitive to changes in dark tones than it is in bright tones. 
 - We gamma correct via the `Power Law` 
-  - $V_{correct} = V_{linear}^{\gamma}$
+  - $V_{correct} = C * V_{linear}^{\gamma}$
+  - $C$ = some constant 
   - $\gamma = 1$ = original image
   - $\gamma > 1$ = darker shadows 
   - $\gamma < 1$ = lighter shadows 
 ![](gammacorrect.png) 
-
-# Multiple Importance Sampling 
-- `Left` = BSDF sampling; `Right` = light sampling ![](mis_01.png)
-  - Orange lobe = bsdf, the more scattered (less specular, less mirror-like), the larger the lobe 
-  - Yellow cone = light distribution 
-- Variance ![](mis_variance.png)
-- The Balance Heuristic 
-  - The sampling #finish me
 
 # Implicit vs Explicit Surfaces 
 - Explicit surfaces = defined by *parameterization* functions, e.g. meshes or specific shapes. 
@@ -215,7 +256,6 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
 - Implicit surfaces are more flexible (any F where solutions exist) 
 
 # Ray Tracing vs Ray Marching 
- 
 - Finding an explicit surface: Ray-Tracing 
   - Given a ray and a specific shape, use that shape's specific intersection test to determine whether the ray intersects it and if so, where.
   - With a ray tracer, we can just plug in point on ray and point on surface, rearrange and we can solve for t 
