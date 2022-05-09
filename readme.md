@@ -136,19 +136,30 @@ This is what we would like to do, in theory, but very hard to integrate things s
   - Input: energy along `wo`, intersection `p`, direction of incoming light `wi`
   - Output: light energy (vec3) along `wo` at `p` given light coming in from `wi` direction
 - Directly dependent on material attributes 
-- Examples: 
-  - Lambert: 
+- Function looks like a bulb in 3D space 
+![](img/whats_brdf.png)
+### Diffuse Material
+- Light is scattered uniformly across the entire hemisphere 
+- Ex: Lambert: 
     - Illumination over the hemisphere is uniform 
     - All directions within the hemisphere emit the same energy 
     - So function is a constant, `mat_color / pi`
     - Why div pi? Cause we need to integrate over the hemisphere surface area. ![](img/lambert_brdf.png)
-  - Specular/Mirror: a function that is 0/black for all `wi` and `wo` that are not perfect reflections of one another at `p`, and 1 when `wi = reflect(wo)`
-![](img/whats_brdf.png)
+### Specular / Mirror 
+- Light is scattered in only one direction given a particular `wo` 
+- a function that is 0/black for all `wi` and `wo` that are not perfect reflections of one another at `p`, and 1 when `wi = reflect(wo)`
+### Reflective 
+- Material scatters light into the same half of the hemisphere in which `wo` lies 
+- Bounces light off its surface
+### Transmissive
+- The material scatters light into the opposite half od the sphere in which `wo` lies 
+- Transmits light through the surface 
+### Glossy / Micro-facet 
+- Light is scattered in a subset of the hemisphere, but still had a non-singular set of directions. 
+![](img/microfacet_brdf.png)
 
 # Specular & Transmissive Materials 
-- Fresnel 
-- Transmission + Reflectance 
-- #todo
+- Fresnel #todo
 
 # Monte Carlo Path Tracing (MCPT)
 - Monte Carlo estimation computes the expected value of the LTE 
@@ -203,6 +214,7 @@ This is what we would like to do, in theory, but very hard to integrate things s
 ![](img/estimating_dl.png)
 
 # (MCPT) Multiple Importance Sampling 
+- A way of evaluating Direct illumination on some point
 - https://github.com/CIS-461-2022/homework-04-multiple-importance-sampling-48kaiying/blob/master/path_tracer/src/integrators/directlightingintegrator.cpp
 - Combines BRDF sampling (used in naive) and Light sampling (used in direct lighting)
 - Problem: It is hard to find a function that marches the PDF of the light source and the PDF of the surface point
@@ -233,8 +245,15 @@ Solution:
 - Compute the weights ![](img/balance_heur.png)
 - Why it works ![](img/balance_heur_1.png)
 - Power heuristic further reduces variance.
-  
 
+Implementation details: 
+- Non recursive 
+- Converges quickly due to light sampling  
+
+# Full Lighting Integrator 
+#todo 
+### Russian Roulette Termination 
+  
 # Gamma Correction 
 - Problem: our eye balls do not perceive light the way cameras do. 
 - Digital cameras capture a `linear relationship` in luminance, but our eyes don't follow this. 
@@ -312,11 +331,67 @@ Solution:
   - So create p'.coord = p.coord + $\epsilon$ for every coordinate of the normal
   - N = normal(SDF(p') - SDF(p))
 
-# Ray Marching 
-
 # Micro-facet Materials 
-- Ornayar Model 
-    - Is a micro-facet material that decreases the fall off of a standard Lambertian model such that is looks more physically accurate
+Motivation: 
+- Materials in the real world are not just specular and diffuse, they are a mix of both. Materials are also not super smooth on the microscopic level. 
+- A way to approximate reflectance of real-world surfaces is to model them as a collection of microscopic planar faces. 
+- The model assumes that the area is wayyy bigger than each microfacet, so we can use the average of many microfacet reflections to determine BRDF model. 
+- `Left`: more rough. `Right`: more smooth ![](img/microfacet_brdf0.png)
+
+Problem: 
+- Storing all these micro facets as geometry is non-feasible 
+
+Solution:
+- Develope a *statistical collection* of randomly oriented facets
+- We want a way to describe the distribution of facet normal $N_f$ (blue rays) relative to the geometric normal $N$ (black ray)
+- Roughness = more variance in model 
+
+### Micro-facet Model Components
+1. $D(w_h)$ = micro facet distribution function (how faceted is this surface really?)
+   - Represents the differential surface area of the micro facet aligned with the surface normal $w_h$
+   - Project the micro facet area 'down' onto surface 
+     - more angled facet = smaller area projection 
+     - "angleness" captured via $\cos(\theta_h)$ where $\theta_h$ = angle between $N$ (surface normal) and $w_h$ (micro facet normal)
+   - Integrates to 1, ![](img/microfacet_da.png)
+
+2. BRDF for an individual facet (are the facets specular or lambertian?)
+   - Blinn micro facet model = facets are perfectly specular 
+   - Oren Nayer model = assumes #finishme
+
+### Mirco-facet Level Lighting 
+- Masking
+  - facet blocks light from reaching eye
+- Shadowing 
+  - facet casts a shadow and shadow reaches eye
+- Inter-reflectance 
+  - facet reflects the light and allows it to reach eye 
+- ![](img/microfacet_light_props.png)
+
+### Torrance Sparrow Model (specular micro facets)
+- Developed to represent metallic surfaces 
+- Assumes every microfacet is a tiny specular mirror 
+- Uses $D(w_h)$ = gives the probability that a micro facet is perpendicular to the surface normal $w_h$, half-vector between $w_o$ and $w_i$. 
+  - we are working backwards: 
+    - So given `w_i, w_o` we find the mid point $w_h$ and compute the probability that there is a micro facet with $w_h$ as its normal. Clearly, that probability is dependent on surface roughness. 
+- $BRDF(p, w_o, w_i) = (D(w_h)G(w_o,w_i)F(w_o)/(4 cos(\theta_o)cos(\theta_i))$
+  - $G$ = geometric attenuation (force reduction) term that accounts for masking + shadowing 
+    - ![](img/microfacet_geom_term.png)
+    - more similar `w_o` is to `w_h` = stronger masking term since micro facet is in the way of our view vector 
+  - $F_r$ = Fresnel reflectance 
+  - $\theta_o, \theta_i$ angles between  normal $w_o, w_i$ respective
+  - distribution function 
+    - ![](img/blinnfacet.png)
+- Reduces down to: ![](img/torrance-sparrow-fres.png)
+
+### Oren Nayar Model (Lambertian / Diffuse micro facet)
+- Describes rough surfaces by V-shaped micro facets. This also means inter-reflectance is only between neighboring micro facets. 
+- All facets are pref. diffuse 
+- Is a micro-facet material that decreases the fall off of a standard Lambertian model such that is looks more physically accurate
+- ![](img/oren_nay.png)
+- For isotropic material 
+
+### Anisotropic vs Isotropic 
+![](img/iso_aniso.png)
 
 # Volumemetric 
 
