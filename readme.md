@@ -251,9 +251,13 @@ Implementation details:
 - Converges quickly due to light sampling  
 
 # Full Lighting Integrator 
-#todo 
+- Recursive MIS 
+- Implemented using an iterative approach 
+- Start with light = 0 and throughput = 1
+- Collect Direct Illumination  
 ### Russian Roulette Termination 
-  
+
+
 # Gamma Correction 
 - Problem: our eye balls do not perceive light the way cameras do. 
 - Digital cameras capture a `linear relationship` in luminance, but our eyes don't follow this. 
@@ -483,6 +487,20 @@ Solution: test groups of elements
 - https://github.com/CIS-461-2022/homework-06-k-d-tree-and-path-tracer-additions-48kaiying/blob/4de175d644a56b4ac5576cf126471648c6eebb6e/path_tracer/src/scene/lights/pointlight.cpp
 - ![](img/ptspotlight.png)
 
+# Photo Mapping 
+- "Backwards" ray tracing
+- Trace light / flux in the direction it flows (photon-like)
+- Super efficient if 
+  - Scene doesn't change 
+  - Re-use illumination like finite element 
+- How it works?
+  - Store illumination info on geometry 
+  - In MCPT each ray object intersection is captured, used forgotten 
+  - In photon mapping, store / cache photon radiance info + incoming directions in point on samples 
+- Implementation 
+  - First compute GI (indirect illumination)
+  - Then compute Direct Illumination 
+  - ![](img/photonmapping.png)
 
 # Volumemetric 
 
