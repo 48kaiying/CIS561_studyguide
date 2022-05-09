@@ -127,6 +127,11 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
 - $pdf(w_i)$ = probability density function associated with the sampling function 
   - when we sample $w_i$, we
 
+# Monte Carlo Path Tracing  
+- Monte Carlo estimation computes the expected value of the LTE 
+  - takes random samples of a function and averages out the results together
+  - the more samples = the more correct the average result of the correct integral value 
+
 # BRDFs
 - A function 
   - Input: energy along `wo`, intersection `p`, direction of incoming light `wi`
@@ -139,12 +144,59 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
     - So function is a constant, `mat_color / pi`
     - Why div pi? Cause we need to integrate over the hemisphere surface area. ![](lambert_brdf.png)
   - Specular/Mirror: a function that is 0/black for all `wi` and `wo` that are not perfect reflections of one another at `p`, and 1 when `wi = reflect(wo)`
-- ![](whats_brdf.png)
+![](whats_brdf.png)
 
-# Monte Carlo Path Tracing  
-- Monte Carlo estimation computes the expected value of the LTE 
-  - takes random samples of a function and averages out the results together
-  - the more samples = the more correct the average result of the correct integral value 
+# Specular & Transmissive Materials 
+- Fresnel 
+- Transmission + Reflectance 
+- fuck 
+
+# Naive Path Tracer 
+- Cast rays and sample from the intersection BRDF. 
+- Ray terminates at recursion depth. 
+- Ray only returns non-black if it hits the light at some point in the path. 
+- Image converges very slowly. ![](naive_pt.png)
+
+# Direct Lighting 
+- Light source sampling, every sample returns information
+- For each sample, cast $w_i$ directly at the light sources
+### Sampling Light Sources 
+- Types
+  - Point light = just 1 $w_i$
+  - Area light, env light = infinitely many destinations for $w_i$  
+- Area Light Sampling, getting $w_i$
+  - Randomly sample a point on the light's surface 
+  - Depends on the shape of the light, can use any type of sampling (uniform disk, random square, random sphere, etc)
+  - `wi` is just sampled like that 
+- Area Light Sampling, getting $pdf(w_i)$ 
+  - Find pdf wrt to light. $PDF_{light} = \frac{1}{area}$
+  - Where light area is the surface area of the light 
+  - Convert $PDF_{light}$ to $PDF_{solid\_angle}$
+### Solid Angle Conversion 
+**$PDF{dw} = PDF_{dA} * (r^2/cos(\theta)) = r^2 / (cos(\theta) * area)$**
+  - **All pdfs** in the path tracer are **with respect to the domain of the hemisphere**, thus we need to convert the PDF wrt light surface area to pdf wrt hemisphere solid angle 
+  - ![](soildangle.png)
+  - ![](soildangle1.png)
+  - ![](soildangle2.png)
+  - Solid angle's $dw$ intuition:
+    - $1 / r^2$ : the farther you (intersection point p) is from the light, the smaller the light path looks
+    - $cos(\theta)$ : theta is the angle between the `light normal` and the `norm(p - light)`
+      - Smaller theta, larger cos(theta) = the more directly the light shines on p ![](sa_r2.png)
+      - Larger theta, smaller cos(theta) = the more the light faces away from p ![](sa_costheta.png)
+  - Conversion: 
+    - $dw/dA = cos(\theta) / r^2$
+    - $PDF_{dw} = PDF_{dA} / (dw/dA)$
+
+# Gamma Correction 
+- Problem: our eye balls do not perceive light the way cameras do. 
+- Digital cameras capture a `linear relationship` in luminance, but our eyes don't follow this. 
+- Our eyes are more sensitive to changes in dark tones than it is in bright tones. 
+- We gamma correct via the `Power Law` 
+  - $V_{correct} = V_{linear}^{\gamma}$
+  - $\gamma = 1$ = original image
+  - $\gamma > 1$ = darker shadows 
+  - $\gamma < 1$ = lighter shadows 
+![](gammacorrect.png) 
 
 # Multiple Importance Sampling 
 - `Left` = BSDF sampling; `Right` = light sampling ![](mis_01.png)
@@ -154,9 +206,7 @@ In a path tracer, we trace the ray backwards i.e. we are casting rays from the c
 - The Balance Heuristic 
   - The sampling #finish me
 
-
 # Implicit vs Explicit Surfaces 
-
 - Explicit surfaces = defined by *parameterization* functions, e.g. meshes or specific shapes. 
   - circle: f(t) = {r * cos(t), r * sin(t)}
 - Implicit surfaces = set of all solutions to some function F(x,y,z) = 0, where x, y, z are unsolved.
